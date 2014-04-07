@@ -1,0 +1,161 @@
+#!/usr/bin/perl -w
+#
+#
+# Copyright (C) 2012 Dominik Sigmund
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#
+use Getopt::Long;
+use vars qw($PROGNAME);
+use vars qw($VERSION);
+use vars qw($ERROR);
+use vars qw($OK);
+
+sub print_help ();
+sub print_usage ();
+
+my ($opt_V, $opt_H, $opt_X, $opt_M, $opt_T, $opt_W, $opt_F);
+$PROGNAME = "random";
+$VERSION = "1.0";
+
+$ERROR = 2;
+$OK = 0;
+
+Getopt::Long::Configure('bundling');
+GetOptions(
+    "v"             => \$opt_V,
+    "version"       => \$opt_V,
+    "h"             => \$opt_H,
+    "help"          => \$opt_H,
+    "f=s"           => \$opt_F,
+    "folder"     	=> \$opt_F
+);
+
+if ($opt_V) {
+	print $VERSION."\n";
+    exit $OK;
+}
+
+if ($opt_H) {
+    print_help();
+    exit $OK;
+}
+if ( !$opt_F) {
+    print "ERROR: No Folder specified\n\n";
+    print_usage();
+    exit $ERROR;
+}
+sub print_usage () {
+    print "Usage:\n";
+    print " $PROGNAME -f folder\n";
+    print " $PROGNAME [-h | --help]\n";
+	print "\n";
+}
+
+sub print_help () {
+    print "Copyright (c) 2012 Dominik Sigmund\n";
+    print_usage();
+}
+#read in files
+opendir (DIR, $opt_F) or die $!;
+while (my $x = readdir(DIR)) 
+	{
+	 # We only want files
+	next unless (-f "$opt_F/$x");
+	push @files, $x;
+	}
+closedir(DIR);
+#get the max number
+$max = @files;
+if($max < 10)
+	{
+	$max_lenght=1;
+	}
+elsif($max < 100)
+	{
+	$max_lenght=2;
+	}
+elsif($max < 1000)
+	{
+	$max_lenght=3;
+	}
+elsif($max < 10000)
+	{
+	$max_lenght=4;
+	}
+else
+	{
+	print "More than 10.000 Files are currently not supported.\n";
+	exit $ERROR;
+	}
+#create an array with all possible numbers: @numbers
+for ($i=1;$i<=$max;$i++)
+	{
+	if(length($i)<=$max_lenght)
+		{
+		$add="";
+		$d = $max_lenght - length($i);
+		for($a=0;$a<$d;$a++)
+			{
+			$add.="0";
+			}
+		$add .=$i 
+		}
+	else
+		{
+		$add = $i;
+		}
+	push @numbers, $add;
+	}
+
+#add folder /
+my $var = substr($opt_F,length($opt_F)-1,1);
+if ($var eq "/")
+	{
+	#nothing
+	}
+else
+	{
+	$opt_F = $opt_F."/";
+	}
+foreach $file (@files)
+	{
+	$old_name = $opt_F.$file;
+	#add random number from @numbers at beginning of file with _
+	$r_i = rand @numbers;
+	$random_number = $numbers[$r_i];
+	$new_name = $opt_F.$random_number."_".$file;
+	#delete number from @numbers
+	$numbers[$r_i] = "X";
+	#reindex array
+	foreach $n (@numbers)
+		{
+		if($n eq "X")
+			{
+			#nothing
+			}
+		else
+			{
+			push @new, $n;
+			}
+		}
+	@numbers = @new;
+	@new = ();
+	#save filename
+	rename($old_name, $new_name) or warn "Couldn't rename $old_name to $new_name: $!\n";
+	}
+	
+print "Randomizing done.\n";
+exit $OK;
